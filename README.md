@@ -5,16 +5,6 @@ Designed for ethical hacking and penetration testing purposes.
 
 ---
 
-## Features
-
-- List all network interfaces and select one to attack
-- Discover gateway MAC address automatically
-- Attempt to retrieve target MAC address by IP
-- Simple console interface with clear messages
-- Written in C#
-
----
-
 ## Installation
 
 1. Clone the repository:
@@ -80,6 +70,7 @@ Please respect ethical hacking principles and only test in environments you own 
 ## Author
 
 <b>João H.</b> (joaostack) – [GitHub](https://github.com/joaostack)
+
 
 
 
