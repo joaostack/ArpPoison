@@ -18,21 +18,26 @@ public class PacketBuild
     {
         try
         {
+            // Get local IP address
             var localIp = ((SharpPcap.LibPcap.LibPcapLiveDevice)device).Addresses
                             .FirstOrDefault(a =>
                                 a.Addr.ipAddress != null &&
                                 a.Addr.ipAddress.AddressFamily == AddressFamily.InterNetwork)
                             ?.Addr.ipAddress;
 
-            var localMac = device.MacAddress;
+            if (localIp == null) throw new InvalidOperationException("[GetMacFromIP] Local IP address not found.");
 
+            // Build ARP request packet
+            var localMac = device.MacAddress;
+            var targetIp = IPAddress.Parse(host);
             var arpPacket = new ArpPacket(
                             ArpOperation.Request,
-                            localMac,
-                            IPAddress.Parse(host),
+                            PhysicalAddress.Parse("00-00-00-00-00-00"),
+                            targetIp,
                             localMac,
                             localIp);
 
+            // send broadcast ethernet frame
             var ethernetPacket = new EthernetPacket(
                 localMac,
                 PhysicalAddress.Parse("FF-FF-FF-FF-FF-FF"),
@@ -40,16 +45,24 @@ public class PacketBuild
 
             ethernetPacket.PayloadPacket = arpPacket;
 
+            // this var will hold the result
             string macRes = null;
 
+            // Task completion source to await the response
             var tcs = new TaskCompletionSource<string>();
 
-            device.OnPacketArrival += (object s, PacketCapture e) =>
+            // here we handle the packet arrival event
+            PacketArrivalEventHandler handler = (object s, PacketCapture e) =>
             {
-                var packet = Packet.ParsePacket(e.GetPacket().LinkLayerType, e.GetPacket().Data);
+                var rawPacket = e.GetPacket();
+                var packet = Packet.ParsePacket(rawPacket.LinkLayerType, rawPacket.Data);
                 var arp = packet.Extract<ArpPacket>();
 
-                if (arp != null && arp.SenderProtocolAddress.ToString() == host && arp.Operation == ArpOperation.Response)
+                /*Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"DEBUG : {arp.SenderHardwareAddress} | {arp.SenderProtocolAddress}");
+                Console.ResetColor();*/
+
+                if (arp != null && arp.Operation == ArpOperation.Response && arp.SenderProtocolAddress.Equals(targetIp))
                 {
                     tcs.TrySetResult(arp.SenderHardwareAddress.ToString());
                 }
@@ -57,13 +70,19 @@ public class PacketBuild
 
             // bpf filter
             device.Filter = "arp";
-
+            device.OnPacketArrival += handler;
             device.StartCapture();
+
+            // wait a moment to ensure the capture is started
+            await Task.Delay(500, ct);
+
             device.SendPacket(ethernetPacket);
 
+            // Timeout cancellation
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(5000);
+            cts.CancelAfter(1000);
 
+            // Await the task or timeout
             try
             {
                 macRes = await tcs.Task.WaitAsync(cts.Token);
@@ -72,9 +91,13 @@ public class PacketBuild
             {
                 macRes = null;
             }
+            finally
+            {
+                //device.StopCapture(); // this cause issue on target mac discovery, i don't know why
+                device.OnPacketArrival -= handler;
+            }
 
-            device.StopCapture();
-            return macRes ?? throw new InvalidOperationException($"[GetMacFromIP] MAC address not found for the target IP {host}");
+            return macRes ?? throw new InvalidOperationException($"[GetMacFromIP] MAC address not found for the target IP {host} (HOST DOWN)");
         }
         catch (Exception ex)
         {

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Net;
 using System.Net.NetworkInformation;
 using SharpPcap;
 
@@ -60,6 +61,19 @@ public class DeviceHelper
             throw new ArgumentNullException(nameof(device), "Device cannot be null.");
         }
 
-        device.Open(DeviceModes.Promiscuous, 1000);
+        device.Open(DeviceModes.Promiscuous | DeviceModes.NoCaptureLocal, 1000);
+    }
+
+    /// <summary>
+    /// Helper for getting the gateway IP address
+    /// </summary>
+    public static IPAddress GetGatewayIP()
+    {
+        return NetworkInterface
+            .GetAllNetworkInterfaces()
+            .Where(n => n.OperationalStatus == OperationalStatus.Up)
+            .SelectMany(n => n.GetIPProperties().GatewayAddresses)
+            .Select(g => g.Address)
+            .FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
     }
 }

