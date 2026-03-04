@@ -61,7 +61,7 @@ public class DeviceHelper
             throw new ArgumentNullException(nameof(device), "Device cannot be null.");
         }
 
-        device.Open(DeviceModes.Promiscuous | DeviceModes.NoCaptureLocal, 1000);
+        device.Open(DeviceModes.Promiscuous, 1000);
     }
 
     /// <summary>
