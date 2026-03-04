@@ -64,7 +64,7 @@ The program will attempt to discover MAC addresses and start spoofing.
 
 ## Dependencies
 
-- [.NET SDK](https://dotnet.microsoft.com/en-us/download)
+- [.NET 9](https://dotnet.microsoft.com/en-us/download)
 - [SharpPcap](https://github.com/chmorgan/sharppcap)
 - [System.CommandLine](https://github.com/dotnet/command-line-api)
 
@@ -86,6 +86,7 @@ Donations
 ## Author
 
 <b>João H.</b> (joaostack) – [GitHub](https://github.com/joaostack)
+
 
 
 
